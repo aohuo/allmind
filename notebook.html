@@ -1,0 +1,50 @@
+<!doctype html>
+<!--
+  AIM 本子页:成果卡片 + 便签批注
+  ================================
+  作者(你)更新批注的方式:
+    在地址栏加 ?edit 打开编辑模式,拖动 / 缩放 / 双击写便签,
+    完成后点右上角“导出 JSON”,把下载的 notes.json 内容覆盖到
+    data/works.js 的 notes 数组里,提交部署即可。
+
+  访客打开的是只读视角,只能看到你预置好的便签。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05090a" />
+    <title>本子 // ALLMIND</title>
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <nav class="site-nav">
+      <a class="nav-brand" href="./index.html">ALLMIND</a>
+      <div class="nav-links">
+        <a class="nav-link" href="./about.html">关于</a>
+        <a class="nav-link" href="./works.html">成果</a>
+        <a class="nav-link is-active" href="./notebook.html" aria-current="page">本子</a>
+      </div>
+      <div class="nav-tools">
+        <span class="nav-edit-hint" id="edit-hint" hidden>编辑模式已开启</span>
+        <button class="nav-button" id="export-notes" type="button" hidden>导出 JSON</button>
+      </div>
+    </nav>
+
+    <main class="site-scene">
+      <div class="noise" aria-hidden="true"></div>
+
+      <header class="page-head">
+        <p class="eyebrow">NOTEBOOK // 成果批注</p>
+        <h1>我的本子</h1>
+        <p>每张成果卡片都可以贴便签,记录当时的想法、复盘和待办。</p>
+        <p class="hint">作者入口:地址栏加 <code>?edit</code> 进入编辑模式</p>
+      </header>
+
+      <section class="board" id="board" aria-label="成果卡片与便签批注"></section>
+    </main>
+
+    <script src="./data/works.js"></script>
+    <script src="./notebook.js"></script>
+  </body>
+</html>

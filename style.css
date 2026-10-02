@@ -1,0 +1,787 @@
+/*
+ * AIM 页面样式结构
+ * ----------------
+ * 1. 全局基础样式
+ * 2. 场景背景与氛围层
+ * 3. SVG 标志及其初始状态
+ * 4. 状态文字和重播按钮
+ * 5. 装饰动画关键帧
+ * 6. JavaScript 播放时使用的状态类
+ * 7. 响应式与无障碍设置
+ */
+
+/*
+ * ==================== CSS 语法基础 ====================
+ *
+ * CSS 的基本结构：
+ *
+ *     选择器 {
+ *       属性: 值;
+ *     }
+ *
+ * - 选择器决定“选中哪些 HTML 元素”；
+ * - { ... } 是这组样式的声明块；
+ * - 属性名说明要改变什么，例如 color；
+ * - 冒号 : 分隔属性和值；
+ * - 分号 ; 结束一条声明；
+ * - CSS 属性一般使用连字符命名，例如 background-color；
+ * - 与 JavaScript 不同，CSS 的空格和换行通常只影响可读性。
+ *
+ * 本文件常见选择器：
+ * - .scene：选中 class="scene" 的元素；
+ * - #scene：选中 id="scene" 的元素（本文件目前主要使用 class）；
+ * - html, body：逗号表示两个选择器共享同一组声明；
+ * - .scene::before：选中由 CSS 生成的伪元素；
+ * - .replay:hover：只在鼠标悬停状态下匹配；
+ * - .is-complete .draw：空格表示选中 .is-complete 内部的 .draw。
+ *
+ * class 适合复用和状态组合；id 应在页面中唯一，通常用于 JS 定位或锚点。
+ */
+
+/* ==================== 1. 全局基础样式 ==================== */
+
+:root {
+  /*
+   * :root 表示文档根元素，在 HTML 中就是 <html>。
+   * 全局字体、主题颜色和 CSS 自定义属性通常放在这里。
+   */
+
+  /* 告诉浏览器本页面采用深色主题，表单控件也会优先使用深色外观。 */
+  color-scheme: dark;
+
+  /* 依次尝试等宽字体；前面的字体不存在时自动使用后面的字体。 */
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  background: #05090a;
+}
+
+/* border-box 让 width/height 包含 padding 和 border，尺寸更容易计算。 */
+/*
+ * * 是通配选择器，匹配所有元素。
+ *
+ * box-sizing 默认是 content-box：width 只包含内容区；
+ * border-box：width 同时包含内容、padding 和 border，更容易控制最终尺寸。
+ */
+* { box-sizing: border-box; }
+
+/*
+ * 逗号表示 html 和 body 都应用后面的声明。
+ * 一行内可以写多条“属性:值;”，效果与分行完全相同。
+ */
+html, body { width: 100%; min-height: 100%; margin: 0; }
+
+/* 页面不滚动，始终作为一个全屏动画场景。 */
+body { overflow: hidden; background: #05090a; }
+
+/* button 默认不会继承字体，这里让它使用页面的等宽字体。 */
+button { font: inherit; }
+
+/* ==================== 2. 场景背景与氛围层 ==================== */
+
+.scene {
+  /* 为内部绝对定位元素建立定位上下文。 */
+  /*
+   * position:relative 不会让元素脱离普通布局，但会成为内部
+   * position:absolute 元素的定位参考。
+   */
+  position: relative;
+
+  /* Grid + place-items:center 是最简洁的水平、垂直居中组合。 */
+  /*
+   * display:grid 开启网格布局。
+   * 本场景只有一个主要内容区，不需要显式划分行列；
+   * place-items:center 是 align-items 和 justify-items 的简写。
+   */
+  display: grid;
+
+  /* svh 使用移动端浏览器当前可见视口高度，减少地址栏造成的跳动。 */
+  min-height: 100svh;
+  place-items: center;
+
+  /*
+   * isolation 创建独立层叠上下文，让负 z-index 的背景层不会跑到 body 后面。
+   */
+  isolation: isolate;
+
+  /*
+   * overflow:hidden 会裁剪超出场景边界的网格和扫描光。
+   * cursor:crosshair 把鼠标样式改为十字准星，只是视觉提示。
+   */
+  overflow: hidden;
+  cursor: crosshair;
+
+  /*
+   * background 可以用逗号叠加多层背景，写在前面的位于上层。
+   *
+   * rgba(r,g,b,a) 的前三项是红绿蓝，a 是透明度，范围 0~1。
+   * radial-gradient 产生径向渐变；linear-gradient 产生线性渐变。
+   */
+  /* 两层渐变：中心微光 + 全屏暗色底。 */
+  background:
+    radial-gradient(circle at 50% 45%, rgba(30, 49, 49, .52) 0, rgba(7, 13, 14, .76) 30%, transparent 58%),
+    linear-gradient(135deg, #070d0f 0%, #020506 54%, #091011 100%);
+}
+
+/*
+ * ::before 负责缓慢漂移的网格纹理；
+ * ::after 复用基础定位，但随后被改造成固定暗角层。
+ */
+.scene::before,
+.scene::after {
+  /*
+   * ::before 和 ::after 是伪元素，HTML 中不需要额外标签。
+   * 伪元素必须设置 content 才会生成盒子，空字符串表示不显示文字。
+   */
+  content: "";
+
+  /*
+   * position:absolute 让元素脱离普通布局。
+   * inset:-20% 是 top/right/bottom/left:-20% 的简写，
+   * 让纹理比视口更大，移动时不容易露出边缘。
+   */
+  position: absolute;
+  inset: -20%;
+
+  /*
+   * z-index 控制同一层叠上下文中的前后顺序。
+   * 数值越大通常越靠前；负值放到主内容后方。
+   */
+  z-index: -2;
+  background:
+    repeating-linear-gradient(115deg, transparent 0 74px, rgba(157, 186, 179, .025) 75px 76px),
+    repeating-linear-gradient(25deg, transparent 0 107px, rgba(157, 186, 179, .02) 108px 109px);
+  animation: drift 18s linear infinite;
+}
+
+/*
+ * 漂移的网格层比视口大 40%（inset:-20%），且铺着两层重复渐变。
+ * 提升为合成层后，位移只改变图层变换，不必每帧重绘这块超大背景 ——
+ * 这是全屏浏览时最容易被忽略的一处大面积重绘。
+ */
+.scene::before { will-change: transform; }
+
+.scene::after {
+  z-index: 4;
+
+  /* 暗角层不接收鼠标事件，下面的按钮仍然可以点击。 */
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 33%, rgba(0, 0, 0, .2) 63%, rgba(0, 0, 0, .84) 100%);
+  animation: none;
+}
+
+/* 全屏颗粒层：内嵌 SVG 的 feTurbulence 生成程序化噪点，无需图片文件。 */
+.noise {
+  /*
+   * inset:0 是 top/right/bottom/left:0 的简写，
+   * 因而噪点层会完整覆盖最近的定位祖先 .scene。
+   */
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  /* opacity 作用于整个元素及其内容，0 完全透明，1 完全不透明。 */
+  opacity: .1;
+
+  /*
+   * data:image/svg+xml,... 是 Data URL，把一小段 SVG 直接写入 CSS。
+   * %3C、%3E 等是 URL 编码后的 <、>，避免特殊字符破坏 CSS 语法。
+   */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.52'/%3E%3C/svg%3E");
+
+  /*
+   * animation 简写依次包含名称、时长、时间函数和重复次数。
+   * steps(2) 让动画分两步跳变，而不是平滑插值；infinite 表示无限循环。
+   */
+  animation: grain .2s steps(2) infinite;
+
+  /*
+   * 噪点层覆盖整个视口，而 grain 每 0.2 秒就改变一次位移。
+   * 提升为合成层后，这每秒 5 次的跳动只移动图层，不再重绘全屏噪点。
+   */
+  will-change: transform;
+}
+
+/* 从上向下扫过画面的淡色扫描光。 */
+.scanline {
+  position: absolute;
+  /*
+   * 四个 inset 值的顺序与 margin 相同：上、右、下、左。
+   * 这里只有三个值：上=-35%，左右=0，下=auto。
+   */
+  inset: -35% 0 auto;
+  z-index: 2;
+  height: 28%;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(transparent, rgba(155, 199, 193, .055), rgba(220, 243, 239, .18), transparent);
+  /*
+   * 这里比前面的动画多一个 1.8s，它是 animation-delay：
+   * 页面载入 1.8 秒后才开始第一次扫描。
+   */
+  animation: scan 5.8s ease-in-out 1.8s infinite;
+
+  /* 扫描光用 translateY 位移，同样提升为合成层避免逐帧重绘。 */
+  will-change: transform;
+}
+
+/* 背景不规则方块：方块本体由 app.js 随机生成,这里只负责容器与呼吸动画。 */
+.blocks {
+  position: absolute;
+  inset: 0;
+  /* 位于几何标志之后、网格纹理之前,作为纯背景装饰。 */
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.block {
+  position: absolute;
+  /* 尺寸、位置、颜色、基础透明度都由 JS 内联写入;--op 是呼吸的基准亮度。 */
+  opacity: var(--op, .08);
+  animation: block-breathe var(--dur, 9s) ease-in-out var(--delay, 0s) infinite;
+}
+
+/* 方块缓慢“呼吸”：从自身基准亮度渐暗到几乎消失,再恢复。 */
+@keyframes block-breathe {
+  0%, 100% { opacity: var(--op, .08); }
+  50% { opacity: .015; }
+}
+
+/* ==================== 3. SVG 标志及其初始状态 ==================== */
+
+.mark-wrap {
+  position: relative;
+
+  /* 在宽屏最大 590px，在窄屏使用视口宽度的 72%。 */
+  /*
+   * min(a,b) 选择较小值：
+   * - 72vw 表示视口宽度的 72%；
+   * - 590px 表示最大不超过 590 个 CSS 像素。
+   */
+  width: min(72vw, 590px);
+
+  /*
+   * 这里原有 filter: drop-shadow(0 22px 45px rgba(0,0,0,.72))，已移除，原因有两点：
+   *
+   * 1. 卡顿：它让整个标志子树先渲染到一个离屏表面再合成，而子树里的
+   *    SVG 每帧都在变（描边动画），等于每帧重算一次 45px 半径的阴影；
+   * 2. 模糊：离屏光栅化会按某个中间分辨率取样再缩放回屏幕尺寸，线条因此发虚。
+   *    移除后 SVG 直接按矢量绘制，边缘会明显更锐利。
+   *
+   * 深色背景上这层阴影本来就几乎不可见，移除后视觉几乎没有差别。
+   */
+}
+
+/* SVG 随容器等比例缩放；overflow:visible 允许辉光超出 viewBox。 */
+.mark {
+  /*
+   * SVG 默认类似行内元素，可能在基线下留下空隙；
+   * display:block 可以消除该空隙。
+   */
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+/* 标志后方呼吸式扩散的光晕。 */
+.halo {
+  position: absolute;
+  inset: 17% 15%;
+  /* 50% 圆角会把矩形变成椭圆。 */
+  border-radius: 50%;
+  opacity: 0;
+
+  /*
+   * 用径向渐变直接得到柔和光团，替代原来的 filter: blur(40px)。
+   * blur() 需要每帧对整块区域做一次高斯模糊（这个光团还在做缩放动画），
+   * 而径向渐变的边缘本身就是渐隐的，渲染代价几乎为零。
+   * 三层色标让衰减曲线接近原来的模糊效果。
+   */
+  background: radial-gradient(
+    circle,
+    rgba(112, 155, 151, .17) 0%,
+    rgba(112, 155, 151, .07) 42%,
+    transparent 72%
+  );
+
+  animation: halo 8s ease-in-out 3.9s infinite;
+}
+
+/*
+ * 辉光不再使用 SVG 滤镜（原 #glow 已从 index.html 移除）。
+ *
+ * 现在改用“双层描边”伪造发光：每条线条下方垫两条同形路径
+ * （.glow-far / .glow-near），它们更粗、更淡、圆头，与主体线条
+ * 以同一中心线叠加，越靠中心越亮、向外自然递减。
+ *
+ * 为什么这样做：
+ * - 原来的 <filter id="glow">（feGaussianBlur + feMerge）是逐帧离屏光栅化。
+ *   绘制动画每帧都在改 stroke-dashoffset，等于每帧重算一次高斯模糊，
+ *   这是全屏播放卡顿的最大来源；离屏缓冲还会让矢量线条发虚。
+ * - 双层描边是普通矢量绘制，零滤镜开销，线条保持完全锐利，
+ *   而且绘制全程都能带辉光，不必在观感和性能之间取舍。
+ */
+
+/* ==================== 辉光垫层（双层描边伪造发光） ==================== */
+
+/*
+ * 三条描边（15 / 8 / 3.5）都以路径中心线为基准重叠绘制。
+ * 与 .draw 一样先隐藏，等 JS 开始绘制时再显示，避免首帧闪现完整图形。
+ */
+.glow {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  visibility: hidden;
+  stroke-dasharray: 0 9999;
+  stroke-dashoffset: 0;
+}
+
+/* 外层：最粗、最淡，负责辉光的外部扩散。 */
+.glow-far {
+  stroke: rgba(188, 219, 213, .13);
+  stroke-width: 15;
+}
+
+/* 内层：稍细、稍亮，让辉光从线条本体到外缘平滑过渡。 */
+.glow-near {
+  stroke: rgba(203, 230, 224, .22);
+  stroke-width: 8;
+}
+
+/* 横线的两个垫层跟随 .a-bar 一起做 scaleX 展开，因此需要同样的变换参考系。 */
+.glow-bar {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleX(0);
+}
+
+/* 节点辉光：两层更大的同心圆，与主体圆共用 nodes-in 淡入。 */
+.glow-dot-far { fill: rgba(220, 233, 231, .1); }
+.glow-dot-near { fill: rgba(220, 233, 231, .2); }
+
+/*
+ * 所有由 JavaScript 绘制的路径默认隐藏。
+ * 这可以防止 JS 尚未执行时，浏览器先短暂显示完整图形。
+ */
+.draw {
+  /*
+   * visibility:hidden 会保留元素的几何信息，但不绘制它。
+   * 因此 JS 仍然可以调用 getTotalLength() 计算路径长度。
+   *
+   * display:none 则可能让某些几何测量或动画流程更难处理，
+   * 所以这里选择 visibility。
+   */
+  visibility: hidden;
+
+  /*
+   * stroke-dasharray 定义 SVG 描边“实线段、空白段”的交替长度；
+   * stroke-dashoffset 控制整个虚线图案沿路径移动多少距离。
+   * 初始值主要用于防止 JS 执行前闪现，真正长度会由 JS 动态覆盖。
+   */
+  stroke-dasharray: 0 9999;
+  stroke-dashoffset: 0;
+}
+
+.outer-triangle {
+  /* 圆角连接能避免三角形顶点出现尖锐缺口。 */
+  stroke-linejoin: round;
+}
+
+/* 内部线条的端点和连接处使用圆角，与辉光风格保持一致。 */
+.inner-left,
+.inner-right,
+.m-left,
+.m-right,
+.i-stem {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.a-bar {
+  stroke-linecap: round;
+  visibility: hidden;
+
+  /*
+   * transform-box:fill-box 让变换参考横线自身的包围盒；
+   * transform-origin:center 让 scaleX(0→1) 从中心同时向两侧展开。
+   */
+  transform-box: fill-box;
+  transform-origin: center;
+  /*
+   * transform 不改变文档布局，只改变最终绘制结果。
+   * scaleX(0) 将横向比例缩小为 0，所以横线不可见但仍保留结构。
+   */
+  transform: scaleX(0);
+}
+
+/* 中央径向微光，延迟到几何标志接近完成时出现。 */
+/*
+ * animation 简写此处依次为：
+ * 名称 core-in、时长 2s、缓动 ease-out、延迟 3.35s、填充 forwards。
+ * forwards 表示播放结束后保留最后一个关键帧。
+ */
+.core { opacity: 0; animation: core-in 2s ease-out 3.35s forwards; }
+
+/*
+ * 顶点与底边节点采用短促闪烁的 steps 动画。
+ * 这里同样不挂滤镜：glow 和 opacity 在同一个元素上，会让那段淡入
+ * 每帧重算一次模糊；辉光统一留到完成态点亮（见 .is-complete .nodes）。
+ */
+.nodes { opacity: 0; animation: nodes-in .4s steps(2) 4.15s forwards; }
+
+/* ==================== 4. 状态文字、账号入口和重播按钮 ==================== */
+
+.status {
+  /*
+   * Flex 布局适合把左文字、伸缩横线、右文字排列在同一行。
+   * align-items:center 让三个子项在交叉轴上垂直居中。
+   */
+  display: flex;
+  align-items: center;
+  width: 72%;
+  margin: -1.3rem auto 0;
+  color: rgba(183, 203, 199, .62);
+  /*
+   * clamp(最小值, 理想值, 最大值)：
+   * 字号随视口宽度变化，但不会小于 .54rem 或大于 .68rem。
+   * rem 相对于根元素字体大小，vw 相对于视口宽度。
+   */
+  font-size: clamp(.54rem, 1.2vw, .68rem);
+  letter-spacing: .33em;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: status-in .7s ease 4.4s forwards;
+}
+
+.status-rule {
+  /*
+   * flex:1 让中间线占据文字之外的剩余宽度。
+   * margin 的两个值表示：上下 0，左右 1.1rem。
+   */
+  flex: 1;
+  height: 1px;
+  margin: 0 1.1rem;
+  background: rgba(166, 190, 185, .26);
+}
+
+/*
+ * 登录与注册按钮组的初始位置。
+ *
+ * position:absolute 让它以全屏 .scene 为定位参考；
+ * top:100% 把按钮组的上边缘放在视口底边，因此整个按钮组位于页面下方；
+ * left:50% 配合 translateX(-50%) 只负责水平居中，不做垂直方向的居中。
+ */
+.auth-actions {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  gap: clamp(.7rem, 2vw, 1rem);
+  width: min(78vw, 430px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+
+  /*
+   * top 的过渡产生“由下向上升起”的位移动画。
+   * opacity 使用较短时间，让按钮开始移动时同步显现。
+   */
+  transition:
+    top .9s cubic-bezier(.2, .75, .22, 1),
+    opacity .42s ease-out;
+}
+
+/* 两个 a 标签共享按钮的尺寸、排版和交互基础样式。 */
+.access-button {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(201, 224, 219, .55);
+  border-radius: 2px;
+  color: #dce9e6;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .86rem;
+  letter-spacing: .24em;
+  text-decoration: none;
+  box-shadow: 0 0 20px rgba(157, 195, 187, .07);
+  transition:
+    color .2s ease,
+    border-color .2s ease,
+    background .2s ease,
+    box-shadow .2s ease;
+}
+
+/* 登录是主要操作，使用浅色金属质感填充。 */
+.access-button-primary {
+  color: #07100f;
+  background: linear-gradient(110deg, rgba(145, 170, 166, .94), rgba(210, 225, 221, .96) 52%, rgba(145, 169, 165, .94));
+}
+
+/* 注册是次要操作，使用半透明深色背景。 */
+.access-button-secondary { background: rgba(5, 13, 14, .76); }
+
+.access-button:hover,
+.access-button:focus-visible {
+  border-color: #e0eeeb;
+  box-shadow: 0 0 26px rgba(180, 216, 208, .18);
+  outline: none;
+}
+
+.access-button-primary:hover,
+.access-button-primary:focus-visible { background: #e1ece9; }
+
+.access-button-secondary:hover,
+.access-button-secondary:focus-visible {
+  color: #fff;
+  background: rgba(25, 43, 42, .9);
+}
+
+/* 固定在右下角的重播按钮。 */
+.replay {
+  position: absolute;
+  /* clamp 让按钮到边缘的距离在不同屏幕上平滑变化。 */
+  right: clamp(1.25rem, 4vw, 3rem);
+  bottom: clamp(1.25rem, 4vw, 2.5rem);
+  z-index: 5;
+  padding: .7rem 0;
+  /* 先清除按钮默认边框，再单独绘制底边。 */
+  border: 0;
+  border-bottom: 1px solid rgba(175, 203, 198, .42);
+  color: rgba(191, 215, 211, .52);
+  background: transparent;
+  font-size: .58rem;
+  letter-spacing: .26em;
+  cursor: pointer;
+  /*
+   * transition 只在属性值发生变化时执行平滑过渡。
+   * 这里鼠标悬停时文字和底边颜色会在 .25 秒内改变。
+   */
+  transition: color .25s, border-color .25s;
+}
+
+/*
+ * :hover 匹配鼠标悬停；
+ * :focus-visible 通常匹配键盘导航产生的焦点。
+ * 两个选择器用逗号连接，表示任一状态都应用相同样式。
+ */
+.replay:hover,
+.replay:focus-visible {
+  color: #e0ece9;
+  border-color: #d9e8e4;
+  outline: none;
+}
+
+/* 两次收尾闪烁期间暂时禁用重播，用较暗的文字提示当前不能操作。 */
+.replay:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+/* ==================== 5. CSS 装饰动画关键帧 ==================== */
+
+/* 中央光由透明变亮，再回落到较柔和的最终强度。 */
+/*
+ * @keyframes 定义动画随时间变化的属性。
+ * 0%、35%、100% 是动画进度，不是页面坐标。
+ * 浏览器会自动计算这些关键状态之间的中间值。
+ */
+@keyframes core-in { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: .55; } }
+
+/* 节点闪现：steps(2) 会产生类似电子信号跳变的感觉。 */
+@keyframes nodes-in { 0% { opacity: 0; } 45% { opacity: 1; } 70% { opacity: .25; } 100% { opacity: .9; } }
+
+/* 状态文字淡入并向上归位。 */
+@keyframes status-in { to { opacity: 1; transform: none; } }
+
+/* 背景光晕循环呼吸。 */
+@keyframes halo { 0%, 100% { opacity: .18; transform: scale(.88); } 50% { opacity: .7; transform: scale(1.1); } }
+
+/* 扫描光从视口上方移动到下方。 */
+@keyframes scan { 0% { transform: translateY(-20vh); opacity: 0; } 15% { opacity: 1; } 55% { opacity: .7; } 75%, 100% { transform: translateY(150vh); opacity: 0; } }
+
+/* 快速改变噪点层的位置，模拟每一帧都不同的胶片颗粒。 */
+@keyframes grain { 0% { transform: translate(0, 0); } 25% { transform: translate(-1%, 1%); } 50% { transform: translate(1%, -1%); } 75% { transform: translate(1%, 1%); } }
+
+/* 网格背景进行幅度很小的长时间漂移。 */
+@keyframes drift { to { transform: translate3d(5%, -3%, 0); } }
+
+/* ==================== 6. JavaScript 使用的状态类 ==================== */
+
+/*
+ * JS 重播时会短暂添加 .restarting。
+ * animation:none 强制清除这些 CSS 动画的当前播放状态；
+ * JS 读取一次 offsetWidth 后移除此类，动画便能重新从第一帧开始。
+ */
+.restarting .draw,
+.restarting .core,
+.restarting .nodes,
+.restarting .status,
+.restarting .halo,
+.restarting .auth-actions {
+  /*
+   * !important 提高这条声明的优先级，确保它能临时覆盖元素原有动画。
+   * 一般项目不应滥用 !important；这里用于明确的“强制重置状态”场景。
+   */
+  animation: none !important;
+}
+
+/* 重播开始时按钮应立即回到底部，不能播放一次反向下降动画。 */
+.restarting .auth-actions { transition: none !important; }
+
+/*
+ * 几何动画正常结束后，JS 添加 .show-auth-actions：
+ * - 50% 仍以页面垂直中线为基准；
+ * - 再加 7.25rem（默认字号下约 116px），使按钮顶边停在用户标注的红线处；
+ * - 没有 translateY(-50%)，所以这里绝不是把按钮中心放到页面中间；
+ * - pointer-events:auto 准备接收鼠标事件；闪烁期间仍受 HTML 的 inert 限制，
+ *   JS 等两次闪烁结束后才移除 inert，让按钮可以点击。
+ */
+.show-auth-actions .auth-actions {
+  top: calc(50% + 7.25rem);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/*
+ * 用户单击跳过 AIM 动画时会添加 .skip-auth-motion。
+ * transition:none 覆盖上面的上升过渡，让按钮直接呈现最终位置。
+ */
+.skip-auth-motion .auth-actions { transition: none; }
+
+/*
+ * 整段动画完成后，JS 添加 .is-complete。
+ * 此时彻底移除虚线并强制显示路径，避免浮点路径长度取整留下末端细缝。
+ */
+.is-complete .draw {
+  visibility: visible;
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
+}
+
+/*
+ * 完成态把辉光垫层也锁定为“可见 + 完整实线”。
+ * 正常绘制完和单击跳过都会用内联样式设置这些值,这里是 CSS 层的兜底,
+ * 避免浮点路径长度取整在末端留下细小缝隙。
+ */
+.is-complete .glow {
+  visibility: visible;
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
+}
+
+.is-complete .a-bar {
+  visibility: visible !important;
+  opacity: 1 !important;
+  stroke-dasharray: none !important;
+  stroke-dashoffset: 0 !important;
+  transform: scaleX(1) !important;
+}
+
+/*
+ * 单击跳过动画时，几何序列可能比这些 CSS 装饰动画更早结束。
+ * 因此最终状态类也要锁定一次性装饰元素的最终帧：
+ * - core：中央微光；
+ * - nodes：关键连接点；
+ * - status：底部 ALLMIND / AIM-01 状态栏。
+ *
+ * halo、scanline、noise 是有意持续循环的环境特效，不在这里停止。
+ */
+.is-complete .core {
+  opacity: .55;
+  animation: none;
+}
+
+.is-complete .nodes {
+  opacity: .9;
+  animation: none;
+}
+
+.is-complete .status {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+/* ==================== 7. 响应式与无障碍设置 ==================== */
+
+/* 小屏幕上扩大标志占比，并把重播按钮移到底部中央。 */
+@media (max-width: 600px) {
+  /*
+   * @media 是媒体查询。只有视口宽度不超过 600px 时，
+   * 其中的声明才参与层叠。
+   */
+  .mark-wrap { width: min(92vw, 540px); }
+  .auth-actions { width: min(88vw, 430px); }
+  .replay { right: 50%; transform: translateX(50%); }
+}
+
+/*
+ * 尊重操作系统的“减少动态效果”设置。
+ * CSS 装饰动画会被压缩到近乎瞬间完成，避免持续移动造成不适。
+ */
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * prefers-reduced-motion 来自用户的操作系统/浏览器偏好，
+   * 不是由页面自行判断。reduce 表示用户希望减少非必要运动。
+   */
+  .draw { stroke-dashoffset: 0; }
+  .core { opacity: .55; }
+  .nodes, .status { opacity: .9; transform: none; }
+  .auth-actions { transition-duration: .001ms !important; }
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* ==================== 顶部主站导航 ==================== */
+
+/*
+ * 首页是纯动画场景,这里补一条常显的固定导航,
+ * 让访客不看完动画也能直接进入“关于 / 成果 / 本子”。
+ * z-index 60 高于场景内所有层级(最高 5),保证导航始终可点。
+ */
+.home-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px clamp(16px, 4vw, 30px);
+}
+
+.home-nav-brand {
+  color: rgba(220, 233, 231, .9);
+  font-size: .82rem;
+  letter-spacing: .32em;
+  text-decoration: none;
+}
+
+.home-nav-links {
+  display: flex;
+  gap: 4px;
+}
+
+.home-nav-links a {
+  padding: 6px 12px;
+  border-radius: 2px;
+  color: rgba(142, 161, 158, .92);
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .84rem;
+  letter-spacing: .1em;
+  text-decoration: none;
+  transition: color .18s ease, background .18s ease;
+}
+
+.home-nav-links a:hover {
+  color: #e2ece9;
+  background: rgba(140, 180, 174, .12);
+}
+
+.home-nav a:focus-visible {
+  outline: 1px solid #dce9e7;
+  outline-offset: 4px;
+}

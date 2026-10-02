@@ -1,0 +1,104 @@
+<!doctype html>
+<!--
+  AIM 注册页。
+
+  用户名字段没有 pattern（正则格式）限制，所以汉字、英文字母和数字都可以输入。
+  数据库存储、邮箱验证码以及真实账号创建暂不属于本页面的功能范围。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05090a" />
+    <title>注册 // ALLMIND</title>
+    <link rel="stylesheet" href="./auth.css" />
+  </head>
+  <body>
+    <main class="auth-scene">
+      <div class="noise" aria-hidden="true"></div>
+
+      <section class="auth-card" aria-labelledby="register-title">
+        <header class="auth-header">
+          <a class="brand" href="./index.html" aria-label="返回 AIM 动画首页">ALLMIND</a>
+          <span class="auth-code" aria-hidden="true">AUTH-02</span>
+        </header>
+
+        <div class="auth-intro">
+          <p class="eyebrow">CREATE IDENTITY</p>
+          <h1 id="register-title">注册</h1>
+          <p>创建以邮箱为账号的账户。</p>
+        </div>
+
+        <form class="auth-form" id="register-form" data-auth-form="register" novalidate>
+          <label class="field" for="register-username">
+            <span class="field-label">用户名 <b aria-hidden="true">*</b></span>
+            <input
+              class="auth-input"
+              id="register-username"
+              name="username"
+              type="text"
+              autocomplete="nickname"
+              placeholder="支持中文用户名"
+              aria-describedby="register-username-error"
+              required
+            />
+            <small class="field-error" id="register-username-error" hidden></small>
+          </label>
+
+          <label class="field" for="register-email">
+            <span class="field-label">邮箱账号 <b aria-hidden="true">*</b></span>
+            <input
+              class="auth-input"
+              id="register-email"
+              name="email"
+              type="email"
+              inputmode="email"
+              autocomplete="email"
+              placeholder="name@example.com"
+              aria-describedby="register-email-error"
+              required
+            />
+            <small class="field-error" id="register-email-error" hidden></small>
+          </label>
+
+          <label class="field" for="register-password">
+            <span class="field-label">设置密码 <b aria-hidden="true">*</b></span>
+            <span class="password-control">
+              <input
+                class="auth-input"
+                id="register-password"
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                placeholder="至少设置 6 位密码"
+                aria-describedby="register-password-error"
+                minlength="6"
+                required
+              />
+              <button
+                class="password-toggle"
+                type="button"
+                data-toggle-password="register-password"
+                aria-controls="register-password"
+                aria-pressed="false"
+              >显示</button>
+            </span>
+            <small class="field-error" id="register-password-error" hidden></small>
+          </label>
+
+          <button class="primary-button" type="submit">注册</button>
+          <p class="form-feedback" data-form-feedback role="status" aria-live="polite"></p>
+        </form>
+
+        <div class="divider" aria-hidden="true"><span>或</span></div>
+
+        <p class="switch-page">
+          已经有账号？
+          <a href="./login.html">返回登录</a>
+        </p>
+      </section>
+    </main>
+
+    <script src="./auth.js"></script>
+  </body>
+</html>

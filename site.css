@@ -1,0 +1,608 @@
+/*
+ * 新页面共享样式
+ * ================
+ * 供 notebook.html / works.html / about.html 共用,风格延续 AIM 首页的
+ * 墨绿渐变、等宽字体与金属质感。包含:
+ *   1. 主题变量与全局基础
+ *   2. 顶部导航栏
+ *   3. 场景背景(噪点 + 暗角)
+ *   4. 页面标题区
+ *   5. 成果卡片与媒体区
+ *   6. 便签(锚定到卡片)
+ *   7. 编辑模式控件
+ *   8. 灯箱(图片放大)
+ *   9. 响应式与无障碍
+ */
+
+:root {
+  color-scheme: dark;
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", Consolas, "Microsoft YaHei", monospace;
+
+  --page-background: #05090a;
+  --panel: rgba(7, 15, 16, 0.82);
+  --line: rgba(177, 207, 200, 0.26);
+  --line-soft: rgba(169, 195, 190, 0.13);
+  --text-main: #e2ece9;
+  --text-muted: #8ea19e;
+  --accent: #b8d3ce;
+  --accent-strong: #dce9e7;
+  --note-font: "Xingkai SC", "STKaiti", "KaiTi", "Kaiti SC", "楷体", cursive;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  min-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  background: var(--page-background);
+}
+
+body { min-height: 100svh; }
+
+button, input { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+
+a:focus-visible,
+button:focus-visible {
+  outline: 1px solid #dce9e7;
+  outline-offset: 4px;
+}
+
+/* ==================== 1. 顶部导航栏 ==================== */
+
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 3vw, 30px);
+  padding: 13px clamp(16px, 4vw, 34px);
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(5, 12, 13, 0.82);
+  backdrop-filter: blur(12px);
+}
+
+.nav-brand {
+  color: var(--accent-strong);
+  font-size: .84rem;
+  letter-spacing: .32em;
+  text-decoration: none;
+}
+
+.nav-brand:hover { color: #fff; }
+
+.nav-links {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-link {
+  padding: 6px 12px;
+  border-radius: 2px;
+  color: var(--text-muted);
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .86rem;
+  letter-spacing: .1em;
+  text-decoration: none;
+  transition: color .18s ease, background .18s ease;
+}
+
+.nav-link:hover { color: var(--text-main); background: rgba(140, 180, 174, .1); }
+
+.nav-link.is-active {
+  color: var(--accent-strong);
+  background: rgba(140, 180, 174, .14);
+  box-shadow: inset 0 -1px 0 rgba(220, 233, 231, .4);
+}
+
+.nav-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.nav-edit-hint {
+  color: #9fc2bb;
+  font-size: .72rem;
+  letter-spacing: .06em;
+}
+
+.nav-button {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--text-main);
+  background: rgba(12, 26, 27, .7);
+  font-size: .76rem;
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease;
+}
+
+.nav-button:hover { border-color: var(--accent-strong); background: rgba(30, 52, 51, .85); }
+
+/* ==================== 2. 场景背景 ==================== */
+
+.site-scene {
+  position: relative;
+  min-height: 100svh;
+  padding: 44px clamp(16px, 4vw, 44px) 100px;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(30, 49, 49, .5) 0, rgba(7, 13, 14, .72) 32%, transparent 60%),
+    linear-gradient(135deg, #070d0f 0%, #020506 54%, #091011 100%);
+}
+
+.site-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 32%, rgba(0, 0, 0, .22) 66%, rgba(0, 0, 0, .8) 100%);
+}
+
+.noise {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .07;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.52'/%3E%3C/svg%3E");
+}
+
+/* ==================== 3. 页面标题区 ==================== */
+
+.page-head {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto 40px;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: #718884;
+  font-size: .72rem;
+  letter-spacing: .32em;
+}
+
+.page-head h1 {
+  margin: 0 0 14px;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: clamp(1.9rem, 6vw, 2.6rem);
+  font-weight: 500;
+  letter-spacing: .14em;
+}
+
+.page-head > p {
+  margin: 0 auto;
+  max-width: 620px;
+  color: var(--text-muted);
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .93rem;
+  line-height: 1.8;
+}
+
+.page-head .hint {
+  margin-top: 10px;
+  color: #5f7370;
+  font-size: .76rem;
+}
+
+/* ==================== 4. 成果卡片 ==================== */
+
+/*
+ * 卡片网格。gap 留得比较宽,让锚定便签悬出卡片时不会挤到相邻卡片。
+ */
+.board {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2.6rem 2.2rem;
+  align-items: start;
+}
+
+/*
+ * 卡片容器必须 position:relative,作为便签的定位参考。
+ * 注意:这里不能写 overflow:hidden,否则便签悬出卡片的部分会被裁掉;
+ * 圆角裁剪只交给 .work-media 自己完成。
+ */
+.work-card {
+  position: relative;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  background: var(--panel);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .5);
+}
+
+.work-media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .035) 0 12px, transparent 12px 24px),
+    linear-gradient(150deg, #2c3f42, #182528);
+}
+
+.work-media img,
+.work-media video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.work-media iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* 没有源文件时显示的占位字样。 */
+.work-media.is-placeholder {
+  display: grid;
+  place-items: center;
+}
+
+.media-placeholder {
+  color: rgba(220, 233, 231, .5);
+  font-size: .78rem;
+  letter-spacing: .42em;
+}
+
+/* 视频卡片在媒体区左上角放一个播放角标。 */
+.work-media .play-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 8px;
+  border: 1px solid rgba(220, 233, 231, .4);
+  border-radius: 2px;
+  color: rgba(220, 233, 231, .9);
+  background: rgba(5, 13, 14, .5);
+  font-size: .64rem;
+  letter-spacing: .2em;
+  pointer-events: none;
+}
+
+.work-card h3 {
+  margin: 14px 2px 6px;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--text-main);
+}
+
+.work-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 2px 8px;
+  color: #718481;
+  font-size: .74rem;
+  letter-spacing: .06em;
+}
+
+.work-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: #55706c; }
+
+.work-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 2px 8px;
+}
+
+.work-tags span {
+  padding: 2px 8px;
+  border: 1px solid rgba(160, 195, 188, .22);
+  border-radius: 999px;
+  color: #9fb8b3;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .7rem;
+}
+
+.work-desc {
+  margin: 0 2px 4px;
+  color: var(--text-muted);
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .84rem;
+  line-height: 1.7;
+}
+
+/* ==================== 5. 便签(锚定到卡片) ==================== */
+
+.note {
+  position: absolute;
+  min-width: 140px;
+  min-height: 96px;
+  padding: 15px 15px 17px;
+  border-radius: 2px;
+  color: #2b2a22;
+  font-family: var(--note-font);
+  font-size: 15px;
+  line-height: 23px;
+  /* 默认叠在卡片之上;具体数值由 JS 动态赋值并递增。 */
+  transform: rotate(var(--tilt, 0deg));
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, .34),
+    0 2px 5px rgba(0, 0, 0, .18);
+  cursor: default;
+  user-select: none;
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+
+/* 编辑模式下才允许拖拽与悬停反馈。 */
+/* touch-action:none 阻止触屏拖动便签时页面跟着滚动;只读模式不加,保证正文可滚动。 */
+.editing .note { cursor: grab; touch-action: none; }
+.editing .note:hover { box-shadow: 0 16px 32px rgba(0, 0, 0, .4), 0 3px 7px rgba(0, 0, 0, .22); }
+
+.note.is-dragging {
+  transition: none;
+  cursor: grabbing;
+  box-shadow: 0 26px 48px rgba(0, 0, 0, .46);
+  transform: rotate(var(--tilt, 0deg)) scale(1.03);
+}
+
+.note[data-color="yellow"] { background: linear-gradient(160deg, #fdf5cc, #f6e9a8); }
+.note[data-color="pink"]   { background: linear-gradient(160deg, #fce0e2, #f6cdd0); }
+.note[data-color="green"]  { background: linear-gradient(160deg, #dbedd8, #c8e3c4); }
+.note[data-color="blue"]   { background: linear-gradient(160deg, #d9e9f7, #c4dcf0); }
+.note[data-color="gray"]   { background: linear-gradient(160deg, #eceae2, #dedbd2); }
+
+.note .tape {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  width: 78px;
+  height: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .58), rgba(255, 255, 255, .3));
+  border-left: 1px solid rgba(255, 255, 255, .45);
+  border-right: 1px solid rgba(255, 255, 255, .45);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .14);
+  transform: translateX(-50%) rotate(-2.4deg);
+  pointer-events: none;
+}
+
+.note .note-body {
+  height: 100%;
+  overflow: auto;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overscroll-behavior: contain;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 22px, rgba(120, 100, 60, .15) 22px 23px);
+}
+
+.note .note-body:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(90, 82, 55, .45);
+  pointer-events: none;
+}
+
+.note.is-editing { user-select: text; cursor: text; }
+.note.is-editing .note-body { cursor: text; }
+
+.note .note-del {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: rgba(60, 52, 34, .5);
+  background: transparent;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s ease, background .15s ease, color .15s ease;
+}
+
+.editing .note:hover .note-del { opacity: 1; }
+.note .note-del:hover { color: #7a2f2f; background: rgba(255, 255, 255, .5); }
+
+.note .note-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+
+.editing .note:hover .note-resize { opacity: .6; }
+
+.note .note-resize::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid rgba(60, 52, 34, .62);
+  border-bottom: 2px solid rgba(60, 52, 34, .62);
+}
+
+/* ==================== 6. 编辑模式控件 ==================== */
+
+/* 每张卡片上的“+ 便签”按钮,仅编辑模式显示。 */
+.work-add-note {
+  display: none;
+  margin: 10px 2px 0;
+  padding: 6px 0;
+  width: 100%;
+  border: 1px dashed rgba(160, 195, 188, .35);
+  border-radius: 3px;
+  color: #9fb8b3;
+  background: transparent;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .78rem;
+  letter-spacing: .1em;
+  cursor: pointer;
+  transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+
+.editing .work-add-note { display: block; }
+.work-add-note:hover { border-color: var(--accent-strong); color: var(--text-main); background: rgba(140, 180, 174, .08); }
+
+/* ==================== 7. 灯箱 ==================== */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 4vh 4vw;
+  background: rgba(2, 5, 6, .92);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease;
+}
+
+.lightbox.is-open { opacity: 1; pointer-events: auto; }
+
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 3px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .7);
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--text-main);
+  background: rgba(10, 20, 21, .6);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.lightbox-close:hover { border-color: var(--accent-strong); }
+
+/* ==================== 7b. 分类筛选栏(works 页) ==================== */
+
+.filter-bar {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.filter-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: transparent;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .8rem;
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.filter-btn:hover { color: var(--text-main); border-color: var(--accent); }
+
+.filter-btn.is-active {
+  color: var(--accent-strong);
+  border-color: var(--accent-strong);
+  background: rgba(140, 180, 174, .14);
+}
+
+/* ==================== 7c. 兴趣卡片(about 页) ==================== */
+
+.interest-grid {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.6rem;
+}
+
+.interest-card {
+  padding: 26px 26px 28px;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  background:
+    linear-gradient(145deg, rgba(23, 39, 39, .4), transparent 38%),
+    var(--panel);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .5);
+}
+
+.interest-card .interest-code {
+  margin: 0 0 12px;
+  color: #718884;
+  font-size: .68rem;
+  letter-spacing: .3em;
+}
+
+.interest-card h2 {
+  margin: 0 0 10px;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  color: var(--text-main);
+}
+
+.interest-card p {
+  margin: 0 0 14px;
+  color: var(--text-muted);
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .88rem;
+  line-height: 1.8;
+}
+
+.interest-card ul {
+  margin: 0;
+  padding-left: 1.2em;
+  color: #a9bcb9;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .84rem;
+  line-height: 2;
+}
+
+/* ==================== 8. 响应式与无障碍 ==================== */
+
+@media (max-width: 640px) {
+  .site-nav { flex-wrap: wrap; gap: 8px 14px; }
+  .nav-tools { width: 100%; justify-content: flex-end; }
+  .site-scene { padding-top: 30px; }
+  .board { gap: 2.8rem 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note, .nav-link, .nav-button, .work-add-note, .lightbox {
+    transition: none !important;
+  }
+}

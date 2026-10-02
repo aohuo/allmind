@@ -1,0 +1,341 @@
+/*
+ * 登录页与注册页共用样式
+ * ========================
+ * 本文件只负责两个账号页面，不会改变 index.html 中的 AIM 标志动画。
+ * 背景颜色、中心微光、交叉线条和颗粒参数取自原 AIM 页面，使三个页面视觉统一。
+ */
+
+:root {
+  color-scheme: dark;
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", Consolas, "Microsoft YaHei", monospace;
+
+  /* CSS 自定义属性相当于可以重复使用的样式变量。 */
+  --page-background: #05090a;
+  --panel-background: rgba(7, 15, 16, 0.86);
+  --panel-border: rgba(177, 207, 200, 0.26);
+  --text-main: #e2ece9;
+  --text-muted: #8ea19e;
+  --accent: #b8d3ce;
+  --danger: #e69898;
+}
+
+/* border-box 让输入框声明的宽度包含边框和内边距。 */
+* { box-sizing: border-box; }
+
+html,
+body {
+  min-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  background: var(--page-background);
+}
+
+body { min-height: 100svh; }
+
+button,
+input { font: inherit; }
+
+button,
+a { -webkit-tap-highlight-color: transparent; }
+
+/* ==================== AIM 墨绿色线条背景 ==================== */
+
+.auth-scene {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  padding: 34px 20px;
+  place-items: center;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(30, 49, 49, .52) 0, rgba(7, 13, 14, .76) 30%, transparent 58%),
+    linear-gradient(135deg, #070d0f 0%, #020506 54%, #091011 100%);
+}
+
+/*
+ * ::before 不需要额外 HTML 标签，它生成两组不同角度的细线。
+ * 与 AIM 动画页不同，这里不添加 animation，因此线条保持静止。
+ */
+.auth-scene::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: -2;
+  background:
+    repeating-linear-gradient(115deg, transparent 0 74px, rgba(157, 186, 179, .025) 75px 76px),
+    repeating-linear-gradient(25deg, transparent 0 107px, rgba(157, 186, 179, .02) 108px 109px);
+  transform: rotate(-2deg) scale(1.04);
+}
+
+/* ::after 绘制四周较暗、中间较亮的暗角。 */
+.auth-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 32%, rgba(0, 0, 0, .2) 65%, rgba(0, 0, 0, .82) 100%);
+}
+
+/* 与动画首页相同的程序化噪点；它不会截获鼠标点击。 */
+.noise {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .08;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.52'/%3E%3C/svg%3E");
+}
+
+/* ==================== 表单卡片 ==================== */
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 460px);
+  padding: 34px 38px 32px;
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  color: var(--text-main);
+  background:
+    linear-gradient(145deg, rgba(23, 39, 39, .36), transparent 34%),
+    var(--panel-background);
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, .62),
+    inset 0 0 32px rgba(145, 184, 177, .025);
+  backdrop-filter: blur(13px);
+}
+
+/* 顶部亮线呼应 AIM 标志的金属描边。 */
+.auth-card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 9%;
+  width: 82%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(220, 239, 235, .8), transparent);
+  box-shadow: 0 0 12px rgba(205, 235, 229, .42);
+}
+
+.auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(169, 195, 190, .13);
+}
+
+.brand,
+.auth-code,
+.eyebrow {
+  font-size: .72rem;
+  letter-spacing: .29em;
+}
+
+.brand {
+  color: #d4e2de;
+  text-decoration: none;
+}
+
+.brand:hover,
+.brand:focus-visible { color: #fff; }
+
+.auth-code { color: #718481; }
+
+.auth-intro { padding: 28px 0 24px; }
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: #718884;
+}
+
+.auth-intro h1 {
+  margin: 0;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: clamp(1.9rem, 7vw, 2.5rem);
+  font-weight: 500;
+  letter-spacing: .14em;
+}
+
+.auth-intro > p:last-child {
+  margin: 11px 0 0;
+  color: var(--text-muted);
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .91rem;
+  line-height: 1.7;
+}
+
+.auth-form { display: grid; gap: 19px; }
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field-label {
+  color: #b8c8c5;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .87rem;
+}
+
+.field-label b {
+  color: #b98282;
+  font-weight: 400;
+}
+
+.auth-input {
+  width: 100%;
+  height: 52px;
+  padding: 0 15px;
+  border: 1px solid rgba(163, 192, 186, .25);
+  border-radius: 2px;
+  outline: none;
+  color: #edf4f2;
+  background: rgba(2, 7, 8, .67);
+  caret-color: #d7e8e4;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.auth-input::placeholder { color: #536562; }
+
+.auth-input:hover { border-color: rgba(181, 210, 203, .4); }
+
+.auth-input:focus {
+  border-color: rgba(210, 232, 227, .72);
+  background: rgba(5, 13, 14, .92);
+  box-shadow: 0 0 0 3px rgba(153, 191, 183, .08), 0 0 18px rgba(152, 192, 183, .08);
+}
+
+.password-control {
+  position: relative;
+  display: block;
+}
+
+.password-control .auth-input { padding-right: 68px; }
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 13px;
+  padding: 5px;
+  border: 0;
+  color: #94aaa6;
+  background: transparent;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible { color: #edf7f4; }
+
+.field-error {
+  color: var(--danger);
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+/* aria-invalid 由 JavaScript 只在验证失败时设置，避免刚打开页面就显示红框。 */
+.auth-input[aria-invalid="true"] {
+  border-color: rgba(224, 135, 135, .68);
+  box-shadow: 0 0 0 3px rgba(207, 103, 103, .07);
+}
+
+.primary-button {
+  width: 100%;
+  height: 52px;
+  margin-top: 3px;
+  border: 1px solid rgba(205, 229, 224, .68);
+  border-radius: 2px;
+  color: #07100f;
+  background: linear-gradient(110deg, #91aaa6, #d2e1dd 52%, #91a9a5);
+  box-shadow: 0 0 22px rgba(159, 196, 188, .13);
+  cursor: pointer;
+  transition: filter 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.primary-button:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 28px rgba(176, 211, 204, .2);
+}
+
+.primary-button:active { transform: translateY(1px); }
+
+.form-feedback {
+  min-height: 1.35em;
+  margin: -5px 0 0;
+  color: #9fc2bb;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .79rem;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 19px 0;
+  color: #677a76;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(158, 185, 179, .18);
+}
+
+.divider span {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .82rem;
+}
+
+.switch-page {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: .91rem;
+  text-align: center;
+}
+
+.switch-page a {
+  color: #d0e2de;
+  text-underline-offset: 4px;
+}
+
+.switch-page a:hover,
+.switch-page a:focus-visible { color: #fff; }
+
+/* focus-visible 只在键盘操作时显示清晰的焦点轮廓。 */
+a:focus-visible,
+button:focus-visible {
+  outline: 1px solid #dce9e7;
+  outline-offset: 4px;
+}
+
+/* 小屏幕减少卡片留白，避免输入区域过窄。 */
+@media (max-width: 520px) {
+  .auth-scene {
+    padding: 18px 12px;
+    place-items: start center;
+    overflow-y: auto;
+  }
+
+  .auth-card {
+    margin-block: auto;
+    padding: 27px 22px 25px;
+  }
+
+  .auth-intro { padding: 23px 0 20px; }
+}
+
+/* 用户要求减少动态效果时，去除非必要的过渡。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after { transition-duration: .01ms !important; }
+}

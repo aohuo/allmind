@@ -1,0 +1,25 @@
+# 统一换行符为 LF。
+#
+# 原因:Windows 上 git 安装时默认 core.autocrlf=true,会在检出时把仓库里的 LF
+# 转成工作区的 CRLF。结果是"文件内容没变,git status 却显示已修改"这种假改动,
+# 在跨平台协作或多次 clone 后尤其容易困惑。用 eol=lf 明确固定下来最省事。
+* text=auto eol=lf
+
+# 图片、字体、音视频属于二进制，不参与换行转换。
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.mp4   binary
+*.webm  binary
+*.mp3   binary
+*.wav   binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+
+# SVG 是文本（内嵌在 CSS 里的那些噪点就是 SVG），保持 LF 便于 diff。
+*.svg   text eol=lf

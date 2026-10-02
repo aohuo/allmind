@@ -1,0 +1,98 @@
+<!doctype html>
+<!--
+  AIM 登录页。
+
+  本页面只负责界面展示和浏览器端格式校验，不连接数据库，也不会把用户输入
+  发送到服务器。登录与注册页共用 auth.css 和 auth.js，避免两套页面出现不一致。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05090a" />
+    <title>登录 // ALLMIND</title>
+    <link rel="stylesheet" href="./auth.css" />
+  </head>
+  <body>
+    <!-- auth-scene 复用 AIM 主页面的墨绿色渐变、交叉线条与暗角。 -->
+    <main class="auth-scene">
+      <!-- noise 只负责颗粒质感，aria-hidden 表示它不包含有意义的内容。 -->
+      <div class="noise" aria-hidden="true"></div>
+
+      <section class="auth-card" aria-labelledby="login-title">
+        <header class="auth-header">
+          <!-- 点击品牌名可以返回 AIM 动画首页。 -->
+          <a class="brand" href="./index.html" aria-label="返回 AIM 动画首页">ALLMIND</a>
+          <span class="auth-code" aria-hidden="true">AUTH-01</span>
+        </header>
+
+        <div class="auth-intro">
+          <p class="eyebrow">IDENTITY VERIFICATION</p>
+          <h1 id="login-title">登录</h1>
+          <p>使用你的邮箱账号进入 AIM 系统。</p>
+        </div>
+
+        <!--
+          novalidate 关闭浏览器默认气泡提示，由 auth.js 输出统一的中文错误信息。
+          required、type="email" 和 minlength="6" 仍然保留，因此浏览器的
+          Constraint Validation API 依旧知道每个输入框应遵守什么规则。
+        -->
+        <form class="auth-form" id="login-form" data-auth-form="login" novalidate>
+          <label class="field" for="login-email">
+            <span class="field-label">邮箱账号 <b aria-hidden="true">*</b></span>
+            <input
+              class="auth-input"
+              id="login-email"
+              name="email"
+              type="email"
+              inputmode="email"
+              autocomplete="username"
+              placeholder="name@example.com"
+              aria-describedby="login-email-error"
+              required
+            />
+            <small class="field-error" id="login-email-error" hidden></small>
+          </label>
+
+          <label class="field" for="login-password">
+            <span class="field-label">密码 <b aria-hidden="true">*</b></span>
+            <span class="password-control">
+              <input
+                class="auth-input"
+                id="login-password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="至少输入 6 位密码"
+                aria-describedby="login-password-error"
+                minlength="6"
+                required
+              />
+              <button
+                class="password-toggle"
+                type="button"
+                data-toggle-password="login-password"
+                aria-controls="login-password"
+                aria-pressed="false"
+              >显示</button>
+            </span>
+            <small class="field-error" id="login-password-error" hidden></small>
+          </label>
+
+          <button class="primary-button" type="submit">登录</button>
+          <!-- role="status" 让屏幕阅读器在文字变化时朗读结果。 -->
+          <p class="form-feedback" data-form-feedback role="status" aria-live="polite"></p>
+        </form>
+
+        <div class="divider" aria-hidden="true"><span>或</span></div>
+
+        <p class="switch-page">
+          还没有账号？
+          <a href="./register.html">前往注册</a>
+        </p>
+      </section>
+    </main>
+
+    <script src="./auth.js"></script>
+  </body>
+</html>

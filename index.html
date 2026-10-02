@@ -1,0 +1,292 @@
+<!doctype html>
+<!--
+  <!doctype html> 是文档类型声明，不是普通 HTML 标签。
+  它告诉浏览器按照现代 HTML5 标准模式解析页面，避免进入兼容旧网页的怪异模式。
+-->
+<html lang="zh-CN">
+  <!--
+    <html> 是整个文档的根元素。
+    lang="zh-CN" 表示主要语言为简体中文，搜索引擎、翻译工具和屏幕阅读器
+    会使用这个信息选择更合适的处理方式。
+
+    HTML 标签通常成对出现：
+      <section> 是开始标签；
+      </section> 是结束标签；
+    标签之间是它的子内容。
+
+    写在开始标签内的 name="value" 叫“属性”：
+    - name 是属性名；
+    - = 连接属性名和值；
+    - value 通常写在双引号内。
+  -->
+  <head>
+    <!--
+      <head> 保存页面元数据、标题和外部资源引用，一般不直接显示在页面主体中。
+      <body> 才保存用户能够看到或交互的内容。
+    -->
+    <meta charset="UTF-8" />
+    <!-- charset 指定 UTF-8 编码，使中文和大多数字符能够正确显示。 -->
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      viewport 控制移动设备的布局视口：
+      - width=device-width：布局宽度等于设备屏幕宽度；
+      - initial-scale=1.0：初始缩放比例为 1。
+    -->
+
+    <meta name="theme-color" content="#05090a" />
+    <!-- 部分移动浏览器会用 theme-color 设置地址栏等界面的主题色。 -->
+
+    <title>AIM // Linkage Sequence</title>
+    <!-- title 显示在浏览器标签页和书签名称中。 -->
+
+    <link rel="stylesheet" href="./style.css" />
+    <!--
+      <link> 引入外部资源：
+      - rel="stylesheet" 表示资源是样式表；
+      - href="./style.css" 表示读取当前目录中的 style.css；
+      - ./ 代表“当前 HTML 文件所在目录”。
+    -->
+  </head>
+  <body>
+    <!-- 顶部主站导航：常显，让访客从动画门面直接进入三个内容页。 -->
+    <nav class="home-nav" aria-label="站点导航">
+      <a class="home-nav-brand" href="./index.html" aria-current="page">ALLMIND</a>
+      <div class="home-nav-links">
+        <a href="./about.html">关于</a>
+        <a href="./works.html">成果</a>
+        <a href="./notebook.html">本子</a>
+      </div>
+    </nav>
+
+    <!--
+      id 与 class 的区别：
+      - id 在一个页面中应当唯一，例如 id="scene"；
+      - class 可以被多个元素复用，也可同时写多个类名；
+      - CSS 中 #scene 选择 id，.scene 选择 class；
+      - JavaScript 可以通过 querySelector 使用相同的选择器语法。
+    -->
+
+    <!--
+      整个页面只有一个主场景。
+      scene 同时作为 CSS 背景容器，以及 JS 添加 restarting/is-complete 状态类的节点。
+    -->
+    <main class="scene" id="scene" aria-label="A 与 M 几何标志动画，单击可跳过绘制，结尾两次闪烁不可跳过，闪烁结束后双击可重新播放">
+      <!-- aria-hidden 表示这两个元素只有装饰作用，屏幕阅读器无需朗读。 -->
+      <div class="noise" aria-hidden="true"></div>
+      <div class="scanline" aria-hidden="true"></div>
+      <!-- 背景不规则方块层：方块本体由 app.js 随机生成分布与亮度。 -->
+      <div class="blocks" aria-hidden="true"></div>
+
+      <section class="mark-wrap" aria-label="几何字母 A 与 M">
+        <div class="halo" aria-hidden="true"></div>
+
+        <!--
+          viewBox 建立 520×460 的内部坐标系。
+          页面缩放 SVG 时，所有路径坐标仍然以这个固定坐标系计算。
+
+          SVG 是基于 XML 的矢量图形语法：
+          - 与位图不同，放大后路径不会出现像素锯齿；
+          - path 保存点和线的数学坐标；
+          - stroke 控制线条，fill 控制内部填充。
+
+          role="img" 告诉无障碍工具把整个 SVG 当作一张图片；
+          aria-labelledby="logo-title logo-desc" 表示图片名称和描述来自
+          id 为 logo-title、logo-desc 的两个元素。
+        -->
+        <svg class="mark" viewBox="0 0 520 460" role="img" aria-labelledby="logo-title logo-desc">
+          <!-- title 和 desc 为屏幕阅读器提供图形名称及绘制过程说明。 -->
+          <title id="logo-title">A 与 M 合体几何标志</title>
+          <desc id="logo-desc">外部三角形完成后，从底边四分之一和四分之三处同时连接顶点，绘制横线形成 A，再从横线两端连接底边中点形成 M，最后从横线中点垂直连接底边</desc>
+
+          <!-- defs 中的滤镜和渐变不会直接显示，由后续图形通过 id 引用。 -->
+          <defs>
+            <!--
+              这里原来定义了一个 <filter id="glow">（feGaussianBlur + feMerge）来产生
+              发光描边，现已移除，改用“双层描边”伪造辉光：
+              每条线条下方垫两条更粗、更淡、圆头的同形路径（.glow-far / .glow-near）。
+
+              原因：SVG 滤镜是逐帧的离屏光栅化。绘制动画每帧都在改 stroke-dashoffset，
+              等于每帧重算一次高斯模糊，这是全屏播放卡顿的最大来源；而滤镜带来的
+              离屏缓冲还会让矢量线条发虚。双层描边是普通矢量绘制，零滤镜开销，
+              线条也能保持锐利。
+            -->
+
+            <!--
+              userSpaceOnUse 让渐变使用 SVG 坐标，而不是每条路径自己的包围盒。
+              水平线的包围盒高度为 0；如果使用默认 objectBoundingBox，部分浏览器
+              无法绘制该渐变，所以这里必须使用 userSpaceOnUse。
+            -->
+            <linearGradient id="metal" gradientUnits="userSpaceOnUse" x1="58" y1="38" x2="462" y2="398">
+              <!--
+                stop 定义渐变色标：
+                - offset=0 是渐变起点；
+                - offset=.45 是 45% 位置；
+                - offset=1 是渐变终点。
+              -->
+              <stop offset="0" stop-color="#edf7f4" />
+              <stop offset=".45" stop-color="#8fa3a2" />
+              <stop offset="1" stop-color="#d8e3df" />
+            </linearGradient>
+
+            <!-- 标志中央的柔和径向光。 -->
+            <radialGradient id="core" cx="50%" cy="48%" r="52%">
+              <stop offset="0" stop-color="#dcebea" stop-opacity=".22" />
+              <stop offset="1" stop-color="#89b2ae" stop-opacity="0" />
+            </radialGradient>
+          </defs>
+
+          <!-- 位于所有线条下方的半透明中央微光。 -->
+          <circle class="core" cx="260" cy="232" r="155" fill="url(#core)" />
+
+          <!--
+            外三角形是一条连续闭合路径：
+            顶点(260,38) → 左下角(58,398) → 右下角(462,398) → Z 回到顶点。
+            使用单条路径可以保证三个角在最终状态完全闭合。
+          -->
+          <g class="geometry outer" fill="none" stroke="url(#metal)" stroke-width="3">
+            <!--
+              path 的 d 属性是一串绘图命令：
+              - M260 38：把画笔移动到 (260,38)，不画线；
+              - L58 398：从当前位置画直线到 (58,398)；
+              - L462 398：继续画直线到底边右端；
+              - Z：关闭路径，自动连回最初的 M 坐标。
+
+              SVG 坐标原点位于左上角：x 向右增大，y 向下增大。
+            -->
+            <!-- 两条辉光垫层必须排在主体之前：SVG 按文档顺序绘制，后写的画在上面。 -->
+            <path class="glow glow-far" d="M260 38 L58 398 L462 398 Z" />
+            <path class="glow glow-near" d="M260 38 L58 398 L462 398 Z" />
+            <path class="draw outer-triangle" d="M260 38 L58 398 L462 398 Z" />
+          </g>
+
+          <!--
+            内部 AIM 结构：
+            - 外三角形底边从 x=58 到 x=462，全长 404；
+            - x=159 = 58 + 404×1/4；
+            - x=361 = 58 + 404×3/4；
+            - 横线 y=221，距底边高度为 398-221=177；
+            - 横线端点是它与两条 A 内斜线的交点；
+            - (260,398) 是外三角形底边中点。
+          -->
+          <g class="geometry inner-a" fill="none" stroke="url(#metal)" stroke-width="3.5">
+            <!--
+              <g> 表示 group（分组）。
+              fill、stroke、stroke-width 写在父级 g 上，内部 path 会继承它们；
+              横线单独写 stroke 属性，则会覆盖继承的 stroke 渐变。
+            -->
+
+            <!-- 两条线分别从底边 1/4、3/4 处同时画向顶点，构成 A 的主体。 -->
+            <path class="glow glow-far" d="M159 398 L260 38" />
+            <path class="glow glow-near" d="M159 398 L260 38" />
+            <path class="draw inner-left" d="M159 398 L260 38" />
+
+            <path class="glow glow-far" d="M361 398 L260 38" />
+            <path class="glow glow-near" d="M361 398 L260 38" />
+            <path class="draw inner-right" d="M361 398 L260 38" />
+
+            <!--
+              A 的横线从中心向两侧展开。
+              它用 scaleX 而不是 stroke-dashoffset 做动画，所以两个辉光垫层
+              也要做同样的 scaleX（由 revealCrossbar 同步驱动）。
+            -->
+            <path class="glow glow-far glow-bar" d="M208.66 221 L311.34 221" />
+            <path class="glow glow-near glow-bar" d="M208.66 221 L311.34 221" />
+            <path class="a-bar" d="M208.66 221 L311.34 221" stroke="#dce9e7" />
+
+            <!-- 从横线两端同时连接底边中点，与 A 的下半段共同构成 M。 -->
+            <path class="glow glow-far" d="M208.66 221 L260 398" />
+            <path class="glow glow-near" d="M208.66 221 L260 398" />
+            <path class="draw m-left" d="M208.66 221 L260 398" />
+
+            <path class="glow glow-far" d="M311.34 221 L260 398" />
+            <path class="glow glow-near" d="M311.34 221 L260 398" />
+            <path class="draw m-right" d="M311.34 221 L260 398" />
+
+            <!-- 从横线中心垂直连接底边中点，形成 I 的主体。 -->
+            <path class="glow glow-far" d="M260 221 L260 398" />
+            <path class="glow glow-near" d="M260 221 L260 398" />
+            <path class="draw i-stem" d="M260 221 L260 398" />
+          </g>
+
+          <!-- 关键连接点的发光圆点。 -->
+          <g class="nodes" fill="#dce9e7">
+            <!--
+              circle 使用圆心坐标 cx/cy 和半径 r。
+              例如 cx="260" cy="38" 表示圆心位于三角形顶点。
+
+              每个节点同样用两层同心圆伪造辉光：半径更大、透明度更低。
+              这些圆和主体圆在同一个 <g> 里，因此共用 nodes-in 淡入动画。
+              辉光圆排在主体圆之前，保证实心亮点画在最上层。
+            -->
+            <circle class="glow-dot glow-dot-far" cx="260" cy="38" r="10" />
+            <circle class="glow-dot glow-dot-near" cx="260" cy="38" r="6.4" />
+            <circle cx="260" cy="38" r="3.6" />
+
+            <circle class="glow-dot glow-dot-far" cx="159" cy="398" r="8" />
+            <circle class="glow-dot glow-dot-near" cx="159" cy="398" r="5.2" />
+            <circle cx="159" cy="398" r="2.8" />
+
+            <circle class="glow-dot glow-dot-far" cx="361" cy="398" r="8" />
+            <circle class="glow-dot glow-dot-near" cx="361" cy="398" r="5.2" />
+            <circle cx="361" cy="398" r="2.8" />
+
+            <circle class="glow-dot glow-dot-far" cx="260" cy="398" r="8" />
+            <circle class="glow-dot glow-dot-near" cx="260" cy="398" r="5.2" />
+            <circle cx="260" cy="398" r="2.8" />
+          </g>
+        </svg>
+
+        <!-- 纯装饰状态栏，不参与几何动画和无障碍朗读。 -->
+        <div class="status" aria-hidden="true">
+          <!--
+            span 是没有默认视觉语义的行内容器，适合包裹短文字或装饰线。
+            三个 span 由 CSS Flex 布局排列在同一行。
+          -->
+          <span class="status-copy">ALLMIND</span>
+          <span class="status-rule"></span>
+          <span class="status-code">AIM-01</span>
+        </div>
+      </section>
+
+      <!--
+        登录与注册入口在结尾第一次闪烁开始时出现，并同步上升；
+        两次闪烁结束后才可以点击。
+
+        nav 表示这组链接属于页面导航；它的最终位置由 CSS 设置为
+        top: calc(50% + 7.25rem)，即从原页面中线继续向下移动约 116px。
+        到达指定位置的是整个按钮组的“上边缘”，而不是按钮组的中心。
+
+        初始的 inert 会让按钮在屏幕下方等待期间无法被鼠标或键盘选中；
+        JavaScript 在闪烁结束后移除 inert，并同步更新 aria-hidden。
+      -->
+      <nav
+        class="auth-actions"
+        id="auth-actions"
+        aria-label="账号操作"
+        aria-hidden="true"
+        inert
+      >
+        <!-- a 标签负责页面跳转；href 指向之前创建的登录和注册页面。 -->
+        <a class="access-button access-button-primary" href="./login.html">登录</a>
+        <a class="access-button access-button-secondary" href="./register.html">注册</a>
+      </nav>
+
+      <!-- 点击按钮重播；页面其他位置也支持双击重播。 -->
+      <button class="replay" id="replay" type="button" aria-label="重新播放动画">
+        <!--
+          type="button" 明确它是普通按钮；如果以后放进 form，
+          它不会像默认 submit 按钮那样提交表单。
+          aria-label 提供中文无障碍名称，按钮仍可显示英文视觉文字。
+        -->
+        REPLAY SEQUENCE
+      </button>
+    </main>
+
+    <!--
+      放在 body 末尾，确保脚本执行时上面的 DOM 元素已经创建完成。
+      src="./app.js" 会下载并执行外部 JavaScript 文件。
+    -->
+    <script src="./app.js"></script>
+  </body>
+</html>
