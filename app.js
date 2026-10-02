@@ -191,31 +191,6 @@ function cancelActiveAnimations() {
 }
 
 /**
- * 取出某条主体路径的辉光垫层。
- *
- * 辉光垫层是紧邻在主体路径之前的若干 .glow 兄弟元素（当前是两层）。
- * 它们在 index.html 里按“先垫层、后主体”的顺序成组排列，因此这里向
- * 文档前方一直收集到第一个非 .glow 元素为止。
- *
- * 这样写的好处：以后想调整辉光层数，只改 HTML 即可，JS 完全不用动。
- * previousElementSibling 会跳过注释节点，所以 HTML 里的说明文字不影响配对。
- *
- * @param {SVGPathElement} path 主体路径
- * @returns {SVGPathElement[]} 该路径的所有辉光垫层，由近到远
- */
-function glowLayersOf(path) {
-  const layers = [];
-  let sibling = path.previousElementSibling;
-
-  while (sibling && sibling.classList.contains("glow")) {
-    layers.push(sibling);
-    sibling = sibling.previousElementSibling;
-  }
-
-  return layers;
-}
-
-/**
  * 把所有几何元素恢复到播放前的隐藏状态。
  *
  * 注意：这里同时修改 visibility 和虚线属性。visibility 负责彻底防止首帧闪烁；
@@ -258,19 +233,14 @@ function resetGeometry() {
      * JavaScript 属性名使用小驼峰，因此 CSS 的 stroke-dasharray
      * 在 JS 中写作 strokeDasharray。
      */
-    /* 主体路径和它的辉光垫层必须一起复位，否则会残留上一轮的线条。 */
-    for (const element of [path, ...glowLayersOf(path)]) {
-      element.style.visibility = "hidden";
-      element.style.strokeDasharray = "0 9999";
-      element.style.strokeDashoffset = "0";
-    }
+    path.style.visibility = "hidden";
+    path.style.strokeDasharray = "0 9999";
+    path.style.strokeDashoffset = "0";
   }
 
   // 横线使用横向缩放动画，不使用 stroke-dashoffset，所以单独重置。
-  for (const element of [crossbar, ...glowLayersOf(crossbar)]) {
-    element.style.visibility = "hidden";
-    element.style.transform = "scaleX(0)";
-  }
+  crossbar.style.visibility = "hidden";
+  crossbar.style.transform = "scaleX(0)";
 }
 
 /**
@@ -316,43 +286,46 @@ async function drawPath(path, duration, easing, currentSequence) {
    * dashoffset = 路径长度
    * 将实线段整体移出可见区域，形成动画的初始隐藏状态。
    */
+  path.style.visibility = "visible";
   /*
-   * 辉光垫层与主体路径共用同一套虚线参数：它们坐标完全相同，
-   * 路径长度自然也一致，可以直接复用上面算出的 length。
+   * 反引号 `...` 创建“模板字符串”。
+   * ${length} 会把 length 的数值插入字符串。
    *
-   * 反引号 `...` 创建“模板字符串”，${length} 会把数值插入字符串。
-   * 如果 length 是 177，`${length} ${length}` 的结果就是 "177 177"。
+   * 如果 length 是 177：
+   * `${length} ${length}` 的结果就是字符串 "177 177"。
    */
-  const elements = [path, ...glowLayersOf(path)];
-
-  for (const element of elements) {
-    element.style.visibility = "visible";
-    element.style.strokeDasharray = `${length} ${length}`;
-    element.style.strokeDashoffset = `${length}`;
-  }
+  path.style.strokeDasharray = `${length} ${length}`;
+  path.style.strokeDashoffset = `${length}`;
 
   /*
-   * 关键帧数组和选项对象对主体与垫层完全一样，
-   * 分开写成变量是为了给每个元素创建各自的 Animation 对象。
-   */
-  const keyframes = [
-    { strokeDashoffset: `${length}` },
-    { strokeDashoffset: "0" },
-  ];
-  const options = { duration, easing, fill: "forwards" };
-
-  /*
-   * 主体与所有垫层在同一帧创建动画，因此进度严格同步，
-   * 看起来就是一条带辉光的线在生长。
-   * 每个动画都要登记进 activeAnimations，重播时才能一起取消。
+   * Element.animate() 是 Web Animations API。
    * fill: "forwards" 表示动画完成后暂时保留最后一帧，避免 await 返回时线条闪回。
    */
-  const animations = elements.map((element) => element.animate(keyframes, options));
-  animations.forEach((item) => activeAnimations.push(item));
+  const animation = path.animate(
+    /*
+     * 第一个实参是关键帧数组。
+     * 数组内每个 { ... } 是对象字面量；属性名 strokeDashoffset
+     * 对应要进行插值的 CSS 属性。
+     */
+    [
+      { strokeDashoffset: `${length}` },
+      { strokeDashoffset: "0" },
+    ],
+    /*
+     * 第二个实参是选项对象。
+     * { duration, easing, fill: "forwards" } 使用了对象属性简写：
+     * duration 等价于 duration: duration；
+     * easing 等价于 easing: easing。
+     */
+    { duration, easing, fill: "forwards" },
+  );
+
+  // push() 把新动画追加到数组末尾，并会返回新的数组长度（这里不需要该返回值）。
+  activeAnimations.push(animation);
 
   try {
-    // animations[0] 是主体路径的动画，与垫层同时开始、同时结束。
-    await animations[0].finished;
+    // animation.finished 是一个 Promise，只有这条线真正画完才会继续。
+    await animation.finished;
   } catch {
     // cancel() 会让 finished Promise 被拒绝；这是重播时的正常情况。
     return false;
@@ -365,10 +338,8 @@ async function drawPath(path, duration, easing, currentSequence) {
    * 动画结束后移除虚线模式，变成普通完整实线。
    * 这样可以避免浏览器对小数路径长度进行取整时在末端留下细小缝隙。
    */
-  for (const element of elements) {
-    element.style.strokeDasharray = "none";
-    element.style.strokeDashoffset = "0";
-  }
+  path.style.strokeDasharray = "none";
+  path.style.strokeDashoffset = "0";
   return true;
 }
 
@@ -381,34 +352,27 @@ async function drawPath(path, duration, easing, currentSequence) {
 async function revealCrossbar(currentSequence) {
   if (currentSequence !== sequenceId) return false;
 
+  crossbar.style.visibility = "visible";
+
   /*
-   * 横线的辉光垫层用同样的 scaleX 动画，因此和主体放进同一个数组处理。
-   * animate() 不仅能插值 SVG 描边，也可以插值普通 CSS transform：
+   * animate() 不仅能插值 SVG 描边，也可以插值普通 CSS transform。
    * scaleX(0) 表示横向宽度缩小到 0；scaleX(1) 表示恢复原宽度。
    */
-  const elements = [crossbar, ...glowLayersOf(crossbar)];
-  const keyframes = [{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }];
-  const options = { duration: 550, easing: "ease-out", fill: "forwards" };
-
-  elements.forEach((element) => {
-    element.style.visibility = "visible";
-  });
-
-  const animations = elements.map((element) => element.animate(keyframes, options));
-  animations.forEach((item) => activeAnimations.push(item));
+  const animation = crossbar.animate(
+    [{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }],
+    { duration: 550, easing: "ease-out", fill: "forwards" },
+  );
+  activeAnimations.push(animation);
 
   try {
-    await animations[0].finished;
+    await animation.finished;
   } catch {
     // 用户在横线展开过程中重播时，会进入这里并结束旧序列。
     return false;
   }
 
   if (currentSequence !== sequenceId) return false;
-
-  elements.forEach((element) => {
-    element.style.transform = "scaleX(1)";
-  });
+  crossbar.style.transform = "scaleX(1)";
   return true;
 }
 
@@ -624,19 +588,14 @@ async function finishSequenceImmediately(event) {
    * - strokeDashoffset = "0"：消除路径偏移。
    */
   for (const path of [outerTriangle, innerLeft, innerRight, mLeft, mRight, iStem]) {
-    /* 主体路径和它的辉光垫层一起切到完整显示状态。 */
-    for (const element of [path, ...glowLayersOf(path)]) {
-      element.style.visibility = "visible";
-      element.style.strokeDasharray = "none";
-      element.style.strokeDashoffset = "0";
-    }
+    path.style.visibility = "visible";
+    path.style.strokeDasharray = "none";
+    path.style.strokeDashoffset = "0";
   }
 
   // 横线使用缩放动画，因此恢复方式与使用虚线描边的路径不同。
-  for (const element of [crossbar, ...glowLayersOf(crossbar)]) {
-    element.style.visibility = "visible";
-    element.style.transform = "scaleX(1)";
-  }
+  crossbar.style.visibility = "visible";
+  crossbar.style.transform = "scaleX(1)";
 
   /*
    * 移除可能短暂存在的重播重置类，再添加最终状态类。
@@ -691,63 +650,6 @@ scene.addEventListener("click", finishSequenceImmediately);
 
 // 双击画面任意非按钮区域也可重播。
 scene.addEventListener("dblclick", replaySequence);
-
-/*
- * ==================== 背景不规则方块 ====================
- *
- * 首屏生成一批散布在背景里的小方块,分布、尺寸、亮度和朝向都随机,
- * 让纯渐变的背景更有层次、不那么单调。
- *
- * 方块是纯装饰,放在 .blocks 容器里(z-index:-1,位于几何标志之后),
- * 不参与几何动画的重播,因此只在页面加载时生成一次。
- *
- * 两个随机点:
- * - 颜色固定取自 AIM 的青灰色系,亮度差异由 opacity(0.03~0.16)实现;
- * - 约六成是实心方块,其余是只有描边的空心方块。
- */
-function generateBlocks() {
-  const layer = document.querySelector(".blocks");
-  const palette = ["#8fa3a2", "#b8d3ce", "#5f7a77", "#dce9e7", "#9fc2bb"];
-
-  /* 按视口面积决定数量,让不同屏幕上的密度接近。 */
-  const area = window.innerWidth * window.innerHeight;
-  const count = Math.max(18, Math.min(70, Math.round(area / 32000)));
-
-  for (let i = 0; i < count; i += 1) {
-    const block = document.createElement("span");
-    block.className = "block";
-
-    /* 尺寸 5~43px;位置用百分比,窗口缩放后仍能均匀分布。 */
-    const size = (Math.random() * 38 + 5).toFixed(1);
-    const left = (Math.random() * 100).toFixed(2);
-    const top = (Math.random() * 100).toFixed(2);
-    const color = palette[Math.floor(Math.random() * palette.length)];
-    const opacity = (Math.random() * 0.13 + 0.03).toFixed(3);
-    const rotate = (Math.random() * 24 - 12).toFixed(1);
-    const filled = Math.random() < 0.62;
-
-    block.style.width = size + "px";
-    block.style.height = size + "px";
-    block.style.left = left + "%";
-    block.style.top = top + "%";
-    block.style.transform = "rotate(" + rotate + "deg)";
-    block.style.setProperty("--op", opacity);
-    block.style.setProperty("--dur", (Math.random() * 6 + 6).toFixed(1) + "s");
-    block.style.setProperty("--delay", (Math.random() * 8).toFixed(1) + "s");
-
-    if (filled) {
-      block.style.background = color;
-    } else {
-      block.style.border = "1px solid " + color;
-      block.style.background = "transparent";
-    }
-
-    layer.appendChild(block);
-  }
-}
-
-// 首屏即生成背景方块(只生成一次,不随几何动画重播而重建)。
-generateBlocks();
 
 // 页面脚本加载完成后自动播放一次。
 runSequence();

@@ -49,16 +49,6 @@
     -->
   </head>
   <body>
-    <!-- 顶部主站导航：常显，让访客从动画门面直接进入三个内容页。 -->
-    <nav class="home-nav" aria-label="站点导航">
-      <a class="home-nav-brand" href="./index.html" aria-current="page">ALLMIND</a>
-      <div class="home-nav-links">
-        <a href="./about.html">关于</a>
-        <a href="./works.html">成果</a>
-        <a href="./notebook.html">本子</a>
-      </div>
-    </nav>
-
     <!--
       id 与 class 的区别：
       - id 在一个页面中应当唯一，例如 id="scene"；
@@ -75,8 +65,6 @@
       <!-- aria-hidden 表示这两个元素只有装饰作用，屏幕阅读器无需朗读。 -->
       <div class="noise" aria-hidden="true"></div>
       <div class="scanline" aria-hidden="true"></div>
-      <!-- 背景不规则方块层：方块本体由 app.js 随机生成分布与亮度。 -->
-      <div class="blocks" aria-hidden="true"></div>
 
       <section class="mark-wrap" aria-label="几何字母 A 与 M">
         <div class="halo" aria-hidden="true"></div>
@@ -101,16 +89,17 @@
 
           <!-- defs 中的滤镜和渐变不会直接显示，由后续图形通过 id 引用。 -->
           <defs>
-            <!--
-              这里原来定义了一个 <filter id="glow">（feGaussianBlur + feMerge）来产生
-              发光描边，现已移除，改用“双层描边”伪造辉光：
-              每条线条下方垫两条更粗、更淡、圆头的同形路径（.glow-far / .glow-near）。
+            <!-- 高斯模糊副本与原图叠加，生成发光描边。 -->
+            <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+              <!--
+                stdDeviation 控制模糊程度；
+                result="blur" 给这一步结果命名，后续 feMergeNode 可以引用它。
+              -->
+              <feGaussianBlur stdDeviation="3.2" result="blur" />
 
-              原因：SVG 滤镜是逐帧的离屏光栅化。绘制动画每帧都在改 stroke-dashoffset，
-              等于每帧重算一次高斯模糊，这是全屏播放卡顿的最大来源；而滤镜带来的
-              离屏缓冲还会让矢量线条发虚。双层描边是普通矢量绘制，零滤镜开销，
-              线条也能保持锐利。
-            -->
+              <!-- 先合并模糊副本，再合并 SourceGraphic 原始线条。 -->
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
 
             <!--
               userSpaceOnUse 让渐变使用 SVG 坐标，而不是每条路径自己的包围盒。
@@ -154,9 +143,6 @@
 
               SVG 坐标原点位于左上角：x 向右增大，y 向下增大。
             -->
-            <!-- 两条辉光垫层必须排在主体之前：SVG 按文档顺序绘制，后写的画在上面。 -->
-            <path class="glow glow-far" d="M260 38 L58 398 L462 398 Z" />
-            <path class="glow glow-near" d="M260 38 L58 398 L462 398 Z" />
             <path class="draw outer-triangle" d="M260 38 L58 398 L462 398 Z" />
           </g>
 
@@ -177,35 +163,17 @@
             -->
 
             <!-- 两条线分别从底边 1/4、3/4 处同时画向顶点，构成 A 的主体。 -->
-            <path class="glow glow-far" d="M159 398 L260 38" />
-            <path class="glow glow-near" d="M159 398 L260 38" />
             <path class="draw inner-left" d="M159 398 L260 38" />
-
-            <path class="glow glow-far" d="M361 398 L260 38" />
-            <path class="glow glow-near" d="M361 398 L260 38" />
             <path class="draw inner-right" d="M361 398 L260 38" />
 
-            <!--
-              A 的横线从中心向两侧展开。
-              它用 scaleX 而不是 stroke-dashoffset 做动画，所以两个辉光垫层
-              也要做同样的 scaleX（由 revealCrossbar 同步驱动）。
-            -->
-            <path class="glow glow-far glow-bar" d="M208.66 221 L311.34 221" />
-            <path class="glow glow-near glow-bar" d="M208.66 221 L311.34 221" />
+            <!-- A 的横线从中心向两侧展开。 -->
             <path class="a-bar" d="M208.66 221 L311.34 221" stroke="#dce9e7" />
 
             <!-- 从横线两端同时连接底边中点，与 A 的下半段共同构成 M。 -->
-            <path class="glow glow-far" d="M208.66 221 L260 398" />
-            <path class="glow glow-near" d="M208.66 221 L260 398" />
             <path class="draw m-left" d="M208.66 221 L260 398" />
-
-            <path class="glow glow-far" d="M311.34 221 L260 398" />
-            <path class="glow glow-near" d="M311.34 221 L260 398" />
             <path class="draw m-right" d="M311.34 221 L260 398" />
 
             <!-- 从横线中心垂直连接底边中点，形成 I 的主体。 -->
-            <path class="glow glow-far" d="M260 221 L260 398" />
-            <path class="glow glow-near" d="M260 221 L260 398" />
             <path class="draw i-stem" d="M260 221 L260 398" />
           </g>
 
@@ -214,25 +182,10 @@
             <!--
               circle 使用圆心坐标 cx/cy 和半径 r。
               例如 cx="260" cy="38" 表示圆心位于三角形顶点。
-
-              每个节点同样用两层同心圆伪造辉光：半径更大、透明度更低。
-              这些圆和主体圆在同一个 <g> 里，因此共用 nodes-in 淡入动画。
-              辉光圆排在主体圆之前，保证实心亮点画在最上层。
             -->
-            <circle class="glow-dot glow-dot-far" cx="260" cy="38" r="10" />
-            <circle class="glow-dot glow-dot-near" cx="260" cy="38" r="6.4" />
             <circle cx="260" cy="38" r="3.6" />
-
-            <circle class="glow-dot glow-dot-far" cx="159" cy="398" r="8" />
-            <circle class="glow-dot glow-dot-near" cx="159" cy="398" r="5.2" />
             <circle cx="159" cy="398" r="2.8" />
-
-            <circle class="glow-dot glow-dot-far" cx="361" cy="398" r="8" />
-            <circle class="glow-dot glow-dot-near" cx="361" cy="398" r="5.2" />
             <circle cx="361" cy="398" r="2.8" />
-
-            <circle class="glow-dot glow-dot-far" cx="260" cy="398" r="8" />
-            <circle class="glow-dot glow-dot-near" cx="260" cy="398" r="5.2" />
             <circle cx="260" cy="398" r="2.8" />
           </g>
         </svg>

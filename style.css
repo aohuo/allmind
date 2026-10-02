@@ -152,13 +152,6 @@ button { font: inherit; }
   animation: drift 18s linear infinite;
 }
 
-/*
- * 漂移的网格层比视口大 40%（inset:-20%），且铺着两层重复渐变。
- * 提升为合成层后，位移只改变图层变换，不必每帧重绘这块超大背景 ——
- * 这是全屏浏览时最容易被忽略的一处大面积重绘。
- */
-.scene::before { will-change: transform; }
-
 .scene::after {
   z-index: 4;
 
@@ -192,12 +185,6 @@ button { font: inherit; }
    * steps(2) 让动画分两步跳变，而不是平滑插值；infinite 表示无限循环。
    */
   animation: grain .2s steps(2) infinite;
-
-  /*
-   * 噪点层覆盖整个视口，而 grain 每 0.2 秒就改变一次位移。
-   * 提升为合成层后，这每秒 5 次的跳动只移动图层，不再重绘全屏噪点。
-   */
-  will-change: transform;
 }
 
 /* 从上向下扫过画面的淡色扫描光。 */
@@ -218,32 +205,6 @@ button { font: inherit; }
    * 页面载入 1.8 秒后才开始第一次扫描。
    */
   animation: scan 5.8s ease-in-out 1.8s infinite;
-
-  /* 扫描光用 translateY 位移，同样提升为合成层避免逐帧重绘。 */
-  will-change: transform;
-}
-
-/* 背景不规则方块：方块本体由 app.js 随机生成,这里只负责容器与呼吸动画。 */
-.blocks {
-  position: absolute;
-  inset: 0;
-  /* 位于几何标志之后、网格纹理之前,作为纯背景装饰。 */
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.block {
-  position: absolute;
-  /* 尺寸、位置、颜色、基础透明度都由 JS 内联写入;--op 是呼吸的基准亮度。 */
-  opacity: var(--op, .08);
-  animation: block-breathe var(--dur, 9s) ease-in-out var(--delay, 0s) infinite;
-}
-
-/* 方块缓慢“呼吸”：从自身基准亮度渐暗到几乎消失,再恢复。 */
-@keyframes block-breathe {
-  0%, 100% { opacity: var(--op, .08); }
-  50% { opacity: .015; }
 }
 
 /* ==================== 3. SVG 标志及其初始状态 ==================== */
@@ -259,16 +220,12 @@ button { font: inherit; }
    */
   width: min(72vw, 590px);
 
+  /* 给整个标志和文字区域增加向下的柔和阴影。 */
   /*
-   * 这里原有 filter: drop-shadow(0 22px 45px rgba(0,0,0,.72))，已移除，原因有两点：
-   *
-   * 1. 卡顿：它让整个标志子树先渲染到一个离屏表面再合成，而子树里的
-   *    SVG 每帧都在变（描边动画），等于每帧重算一次 45px 半径的阴影；
-   * 2. 模糊：离屏光栅化会按某个中间分辨率取样再缩放回屏幕尺寸，线条因此发虚。
-   *    移除后 SVG 直接按矢量绘制，边缘会明显更锐利。
-   *
-   * 深色背景上这层阴影本来就几乎不可见，移除后视觉几乎没有差别。
+   * drop-shadow(水平偏移 垂直偏移 模糊半径 颜色) 会依据透明轮廓投影；
+   * 它比 box-shadow 更适合 SVG 和不规则透明图形。
    */
+  filter: drop-shadow(0 22px 45px rgba(0, 0, 0, .72));
 }
 
 /* SVG 随容器等比例缩放；overflow:visible 允许辉光超出 viewBox。 */
@@ -289,75 +246,18 @@ button { font: inherit; }
   /* 50% 圆角会把矩形变成椭圆。 */
   border-radius: 50%;
   opacity: 0;
-
-  /*
-   * 用径向渐变直接得到柔和光团，替代原来的 filter: blur(40px)。
-   * blur() 需要每帧对整块区域做一次高斯模糊（这个光团还在做缩放动画），
-   * 而径向渐变的边缘本身就是渐隐的，渲染代价几乎为零。
-   * 三层色标让衰减曲线接近原来的模糊效果。
-   */
-  background: radial-gradient(
-    circle,
-    rgba(112, 155, 151, .17) 0%,
-    rgba(112, 155, 151, .07) 42%,
-    transparent 72%
-  );
-
+  background: rgba(112, 155, 151, .08);
+  /* blur() 对整个元素做高斯模糊，形成没有硬边的光团。 */
+  filter: blur(40px);
   animation: halo 8s ease-in-out 3.9s infinite;
 }
 
+/* #glow 定义在 index.html 的 SVG <defs> 中。 */
 /*
- * 辉光不再使用 SVG 滤镜（原 #glow 已从 index.html 移除）。
- *
- * 现在改用“双层描边”伪造发光：每条线条下方垫两条同形路径
- * （.glow-far / .glow-near），它们更粗、更淡、圆头，与主体线条
- * 以同一中心线叠加，越靠中心越亮、向外自然递减。
- *
- * 为什么这样做：
- * - 原来的 <filter id="glow">（feGaussianBlur + feMerge）是逐帧离屏光栅化。
- *   绘制动画每帧都在改 stroke-dashoffset，等于每帧重算一次高斯模糊，
- *   这是全屏播放卡顿的最大来源；离屏缓冲还会让矢量线条发虚。
- * - 双层描边是普通矢量绘制，零滤镜开销，线条保持完全锐利，
- *   而且绘制全程都能带辉光，不必在观感和性能之间取舍。
+ * url(#glow) 引用当前 HTML 内 SVG <defs> 中 id="glow" 的滤镜。
+ * CSS 和 SVG 可以通过 id 进行这种跨语法引用。
  */
-
-/* ==================== 辉光垫层（双层描边伪造发光） ==================== */
-
-/*
- * 三条描边（15 / 8 / 3.5）都以路径中心线为基准重叠绘制。
- * 与 .draw 一样先隐藏，等 JS 开始绘制时再显示，避免首帧闪现完整图形。
- */
-.glow {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  visibility: hidden;
-  stroke-dasharray: 0 9999;
-  stroke-dashoffset: 0;
-}
-
-/* 外层：最粗、最淡，负责辉光的外部扩散。 */
-.glow-far {
-  stroke: rgba(188, 219, 213, .13);
-  stroke-width: 15;
-}
-
-/* 内层：稍细、稍亮，让辉光从线条本体到外缘平滑过渡。 */
-.glow-near {
-  stroke: rgba(203, 230, 224, .22);
-  stroke-width: 8;
-}
-
-/* 横线的两个垫层跟随 .a-bar 一起做 scaleX 展开，因此需要同样的变换参考系。 */
-.glow-bar {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scaleX(0);
-}
-
-/* 节点辉光：两层更大的同心圆，与主体圆共用 nodes-in 淡入。 */
-.glow-dot-far { fill: rgba(220, 233, 231, .1); }
-.glow-dot-near { fill: rgba(220, 233, 231, .2); }
+.geometry { filter: url(#glow); }
 
 /*
  * 所有由 JavaScript 绘制的路径默认隐藏。
@@ -422,12 +322,8 @@ button { font: inherit; }
  */
 .core { opacity: 0; animation: core-in 2s ease-out 3.35s forwards; }
 
-/*
- * 顶点与底边节点采用短促闪烁的 steps 动画。
- * 这里同样不挂滤镜：glow 和 opacity 在同一个元素上，会让那段淡入
- * 每帧重算一次模糊；辉光统一留到完成态点亮（见 .is-complete .nodes）。
- */
-.nodes { opacity: 0; animation: nodes-in .4s steps(2) 4.15s forwards; }
+/* 顶点与底边节点采用短促闪烁的 steps 动画。 */
+.nodes { opacity: 0; filter: url(#glow); animation: nodes-in .4s steps(2) 4.15s forwards; }
 
 /* ==================== 4. 状态文字、账号入口和重播按钮 ==================== */
 
@@ -661,17 +557,6 @@ button { font: inherit; }
   stroke-dashoffset: 0;
 }
 
-/*
- * 完成态把辉光垫层也锁定为“可见 + 完整实线”。
- * 正常绘制完和单击跳过都会用内联样式设置这些值,这里是 CSS 层的兜底,
- * 避免浮点路径长度取整在末端留下细小缝隙。
- */
-.is-complete .glow {
-  visibility: visible;
-  stroke-dasharray: none;
-  stroke-dashoffset: 0;
-}
-
 .is-complete .a-bar {
   visibility: visible !important;
   opacity: 1 !important;
@@ -732,56 +617,4 @@ button { font: inherit; }
   .nodes, .status { opacity: .9; transform: none; }
   .auth-actions { transition-duration: .001ms !important; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
-}
-
-/* ==================== 顶部主站导航 ==================== */
-
-/*
- * 首页是纯动画场景,这里补一条常显的固定导航,
- * 让访客不看完动画也能直接进入“关于 / 成果 / 本子”。
- * z-index 60 高于场景内所有层级(最高 5),保证导航始终可点。
- */
-.home-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px clamp(16px, 4vw, 30px);
-}
-
-.home-nav-brand {
-  color: rgba(220, 233, 231, .9);
-  font-size: .82rem;
-  letter-spacing: .32em;
-  text-decoration: none;
-}
-
-.home-nav-links {
-  display: flex;
-  gap: 4px;
-}
-
-.home-nav-links a {
-  padding: 6px 12px;
-  border-radius: 2px;
-  color: rgba(142, 161, 158, .92);
-  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-  font-size: .84rem;
-  letter-spacing: .1em;
-  text-decoration: none;
-  transition: color .18s ease, background .18s ease;
-}
-
-.home-nav-links a:hover {
-  color: #e2ece9;
-  background: rgba(140, 180, 174, .12);
-}
-
-.home-nav a:focus-visible {
-  outline: 1px solid #dce9e7;
-  outline-offset: 4px;
 }
